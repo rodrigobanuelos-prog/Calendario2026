@@ -1,0 +1,365 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Calendario de Turnos</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg:#0c0c12; --surface:#14141e; --surface2:#1b1b27; --border:#28283c; --border2:#32324a;
+    --rodrigo:#ca8a04; --gonzalo:#dc2626; --turnoA:#f59e0b; --turnoB:#38bdf8; --rest:#34d399;
+    --text:#e2e2ef; --muted:#64648a; --radius:14px;
+  }
+  *{margin:0;padding:0;box-sizing:border-box;}
+  body{
+    font-family:'DM Sans',sans-serif; background:var(--bg); color:var(--text);
+    min-height:100vh; padding:36px 18px 80px;
+    background-image:radial-gradient(ellipse at 15% 15%,rgba(220,38,38,.07) 0%,transparent 55%),
+                     radial-gradient(ellipse at 85% 85%,rgba(202,138,4,.07) 0%,transparent 55%);
+  }
+  header{text-align:center;margin-bottom:36px;}
+  header h1{
+    font-family:'Syne',sans-serif; font-size:clamp(1.7rem,4vw,2.6rem); font-weight:800;
+    background:linear-gradient(135deg,#f97316,#fbbf24);
+    -webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;
+    margin-bottom:6px;
+  }
+  header p{color:var(--muted);font-size:.9rem;}
+
+  /* TABS */
+  .tabs{display:flex;gap:8px;justify-content:center;margin-bottom:28px;flex-wrap:wrap;}
+  .tab{padding:9px 22px;border-radius:100px;border:1px solid var(--border2);background:var(--surface);color:var(--muted);font-size:.85rem;font-weight:500;cursor:pointer;transition:all .2s;font-family:'DM Sans',sans-serif;}
+  .tab.active{background:var(--rodrigo);border-color:var(--rodrigo);color:#fff;font-weight:600;}
+  .tab:hover:not(.active){color:var(--text);}
+
+  /* LEGEND */
+  .legend{display:flex;flex-wrap:wrap;gap:10px;justify-content:center;margin-bottom:28px;}
+  .leg{display:flex;align-items:center;gap:7px;background:var(--surface);border:1px solid var(--border);padding:7px 14px;border-radius:100px;font-size:.8rem;}
+  .leg-dot{width:9px;height:9px;border-radius:50%;flex-shrink:0;}
+
+  /* THIS WEEK */
+  .this-week{max-width:680px;margin:0 auto 32px;background:var(--surface);border:1px solid var(--border2);border-radius:var(--radius);padding:20px 24px;}
+  .section-label{font-family:'Syne',sans-serif;font-size:.7rem;text-transform:uppercase;letter-spacing:2px;color:var(--muted);margin-bottom:14px;}
+  .week-people{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
+  .person-card{background:var(--surface2);border-radius:10px;padding:14px 16px;border-left:3px solid transparent;}
+  .person-card.rodrigo-card{border-left-color:var(--rodrigo);}
+  .person-card.gon-card{border-left-color:var(--gonzalo);}
+  .person-name{font-weight:600;font-size:.9rem;margin-bottom:5px;}
+  .person-shift{font-size:.81rem;color:var(--muted);line-height:1.6;}
+  .badge{display:inline-block;padding:2px 10px;border-radius:100px;font-size:.72rem;font-weight:700;margin-top:6px;text-transform:uppercase;letter-spacing:.5px;}
+  .bA{background:rgba(245,158,11,.2);color:var(--turnoA);}
+  .bB{background:rgba(56,189,248,.2);color:var(--turnoB);}
+  .bYou{background:rgba(202,138,4,.2);color:var(--rodrigo);}
+  .bGon{background:rgba(220,38,38,.2);color:var(--gonzalo);}
+  .bRest{background:rgba(52,211,153,.15);color:var(--rest);}
+  .sat-row{margin-top:12px;padding-top:12px;border-top:1px solid var(--border);font-size:.84rem;display:flex;align-items:center;gap:10px;flex-wrap:wrap;}
+
+  /* YEAR NAV */
+  .controls{display:flex;justify-content:center;align-items:center;gap:18px;margin-bottom:28px;}
+  .controls button{background:var(--surface);border:1px solid var(--border);color:var(--text);width:36px;height:36px;border-radius:50%;cursor:pointer;font-size:1rem;display:flex;align-items:center;justify-content:center;transition:all .2s;}
+  .controls button:hover{border-color:var(--rodrigo);color:var(--rodrigo);}
+  .year-label{font-family:'Syne',sans-serif;font-size:1.4rem;font-weight:700;min-width:56px;text-align:center;}
+
+  /* MONTHS GRID */
+  .months-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(275px,1fr));gap:18px;max-width:1100px;margin:0 auto;}
+  .month-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:18px;}
+  .month-title{font-family:'Syne',sans-serif;font-weight:700;font-size:.95rem;text-transform:uppercase;letter-spacing:1px;margin-bottom:12px;}
+  .mini-cal{width:100%;border-collapse:collapse;}
+  .mini-cal th{font-size:.68rem;text-transform:uppercase;color:var(--muted);padding:3px 0;text-align:center;font-weight:500;letter-spacing:.4px;}
+  .mini-cal td{text-align:center;padding:3px 2px;font-size:.83rem;border-radius:7px;position:relative;}
+  .mini-cal td.empty{color:transparent;}
+
+  /* Weekday cells tinted by shift */
+  .mini-cal tr.wA td:not(.saturday):not(.empty){color:#8a7040;}
+  .mini-cal tr.wB td:not(.saturday):not(.empty){color:#2e6a7a;}
+  .mini-cal tr.wA td.saturday-plain{color:#8a7040;}
+  .mini-cal tr.wB td.saturday-plain{color:#2e6a7a;}
+
+  /* Saturday special cells */
+  .mini-cal td.saturday{font-weight:700;font-size:.9rem;}
+  .mini-cal td.sat-rodrigo{background:rgba(202,138,4,.2);color:var(--rodrigo);border:1px solid rgba(202,138,4,.35);}
+  .mini-cal td.sat-gonzalo{background:rgba(220,38,38,.2);color:var(--gonzalo);border:1px solid rgba(220,38,38,.35);}
+  .mini-cal td.sat-rest{background:rgba(52,211,153,.13);color:var(--rest);border:1px solid rgba(52,211,153,.25);}
+  .mini-cal td.today-mark{outline:2px solid #fbbf24;outline-offset:1px;border-radius:7px;}
+
+  /* Week label strip */
+  .wk-strip{display:flex;gap:4px;margin-bottom:6px;flex-wrap:wrap;}
+  .wk-chip{font-size:.65rem;padding:2px 7px;border-radius:100px;font-weight:600;}
+  .wk-chip.A{background:rgba(245,158,11,.15);color:var(--turnoA);}
+  .wk-chip.B{background:rgba(56,189,248,.15);color:var(--turnoB);}
+
+  /* TABLE VIEW */
+  #tableView{max-width:760px;margin:0 auto;display:none;}
+  .tbl-week{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:16px 20px;margin-bottom:10px;}
+  .tbl-head{font-family:'Syne',sans-serif;font-size:.72rem;text-transform:uppercase;letter-spacing:1px;color:var(--muted);margin-bottom:10px;}
+  .tbl-shifts{display:flex;gap:16px;flex-wrap:wrap;margin-bottom:8px;}
+  .tbl-person{display:flex;align-items:center;gap:8px;font-size:.85rem;}
+  .tbl-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0;}
+  .tbl-sat{margin-top:8px;padding-top:8px;border-top:1px solid var(--border);font-size:.8rem;color:var(--muted);display:flex;align-items:center;gap:8px;flex-wrap:wrap;}
+
+  @media(max-width:500px){
+    .months-grid{grid-template-columns:1fr;}
+    .week-people{grid-template-columns:1fr;}
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>📅 Turnos & Sábados</h1>
+  <p>Turnos semanales alternados · Sábados 1 laboral × 3 descanso</p>
+</header>
+
+<div class="tabs">
+  <button class="tab active" onclick="showView('calendar')">📆 Calendario</button>
+  <button class="tab" onclick="showView('table')">📋 Lista semanal</button>
+</div>
+
+<div class="legend">
+  <div class="leg"><div class="leg-dot" style="background:var(--turnoA)"></div><b>Turno A</b>&nbsp;· Lun–Jue 7:00–5:00 / Vie 7:00–4:30</div>
+  <div class="leg"><div class="leg-dot" style="background:var(--turnoB)"></div><b>Turno B</b>&nbsp;· Lun–Jue 8:30–6:30 / Vie 7:30–6:00</div>
+  <div class="leg"><div class="leg-dot" style="background:var(--rodrigo)"></div>Rodrigo — sáb. laboral</div>
+  <div class="leg"><div class="leg-dot" style="background:var(--gonzalo)"></div>Gonzalo — sáb. laboral</div>
+  <div class="leg"><div class="leg-dot" style="background:var(--rest)"></div>Sábado descanso</div>
+</div>
+
+<!-- THIS WEEK -->
+<div class="this-week" id="thisWeekCard"></div>
+
+<!-- YEAR NAV -->
+<div class="controls">
+  <button id="prevYear">&#8592;</button>
+  <div class="year-label" id="yearLabel"></div>
+  <button id="nextYear">&#8594;</button>
+</div>
+
+<!-- CALENDAR -->
+<div id="calView">
+  <div class="months-grid" id="monthsGrid"></div>
+</div>
+
+<!-- TABLE -->
+<div id="tableView">
+  <div id="tableContent"></div>
+</div>
+
+<script>
+// ══════════════════════════════════════════
+//  REFERENCE POINTS
+//  Week of Mar 3 2025 → rodrigo = Turno A, Gonzalo = Turno B
+//  Sat Feb 21 2025    → rodrigo work (sat cycle index 0)
+// ══════════════════════════════════════════
+const REF_WEEK = new Date(2025, 2, 3);  // Mon Mar 3 2025
+const REF_SAT  = new Date(2025, 1, 21); // Sat Feb 21 2025
+
+function getMon(date) {
+  const d = new Date(date);
+  d.setHours(0,0,0,0);
+  const dow = (d.getDay() + 6) % 7; // 0=Mon
+  d.setDate(d.getDate() - dow);
+  return d;
+}
+
+// How many weeks from REF_WEEK to the week containing 'date'
+function weekIdx(date) {
+  const mon = getMon(date);
+  const ref = getMon(REF_WEEK);
+  return Math.round((mon - ref) / (7 * 864e5));
+}
+
+// Simple alternating: even idx → youA/gonB, odd idx → youB/gonA
+function getTurno(date, who) {
+  const idx = weekIdx(date);
+  const isEven = ((idx % 2) + 2) % 2 === 0;
+  if (who === 'rodrigo')     return isEven ? 'A' : 'B';
+  if (who === 'gonzalo') return isEven ? 'B' : 'A';
+}
+
+// Saturday type: cycle of 4 from REF_SAT
+// 0=rodrigo work, 1=gonzalo works, 2=rest, 3=rest
+function satType(date) {
+  const d = new Date(date); d.setHours(0,0,0,0);
+  const b = new Date(REF_SAT); b.setHours(0,0,0,0);
+  const w = Math.round((d - b) / (7 * 864e5));
+  const mod = ((w % 4) + 4) % 4;
+  if (mod === 0) return 'rodrigo';
+  if (mod === 1) return 'gonzalo';
+  return 'rest';
+}
+
+const hoursA = 'Lun–Jue 7:00am – 5:00pm · Vie 7:00am – 4:30pm';
+const hoursB = 'Lun–Jue 7:30am – 6:30pm · Vie 7:30am – 6:00pm';
+
+// ── THIS WEEK CARD ─────────────────────────
+function renderThisWeek() {
+  const today = new Date();
+  const mon = getMon(today);
+  const fri = new Date(mon); fri.setDate(mon.getDate() + 4);
+  const sat = new Date(mon); sat.setDate(mon.getDate() + 5);
+  const fmt = d => d.toLocaleDateString('es', {day:'numeric', month:'short'});
+
+  const youT = getTurno(today, 'rodrigo');
+  const gonT = getTurno(today, 'gonzalo');
+  const st   = satType(sat);
+
+  const satBadge = st === 'rodrigo'
+    ? `<span class="badge bYou">🟠 Rodrigo trabaja · 9am–1pm</span>`
+    : st === 'gonzalo'
+    ? `<span class="badge bGon">🟣 Gonzalo trabaja · 9am–1pm</span>`
+    : `<span class="badge bRest">✅ Descanso para ambos</span>`;
+
+  document.getElementById('thisWeekCard').innerHTML = `
+    <div class="section-label">Semana actual · ${fmt(mon)} – ${fmt(fri)}</div>
+    <div class="week-people">
+      <div class="person-card rodrigo-card">
+        <div class="person-name" style="color:var(--rodrigo)">Rodrigo</div>
+        <div class="person-shift">${youT === 'A' ? hoursA : hoursB}</div>
+        <span class="badge b${youT}">Turno ${youT}</span>
+      </div>
+      <div class="person-card gon-card">
+        <div class="person-name" style="color:var(--gonzalo)">Gonzalo</div>
+        <div class="person-shift">${gonT === 'A' ? hoursA : hoursB}</div>
+        <span class="badge b${gonT}">Turno ${gonT}</span>
+      </div>
+    </div>
+    <div class="sat-row">🗓 Sáb ${fmt(sat)}: ${satBadge}</div>
+  `;
+}
+
+// ── CALENDAR ───────────────────────────────
+const MONTHS = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
+const DAYS   = ['Do','Lu','Ma','Mi','Ju','Vi','Sá'];
+let currentYear = new Date().getFullYear();
+
+function renderCalendar(year) {
+  document.getElementById('yearLabel').textContent = year;
+  const grid = document.getElementById('monthsGrid');
+  grid.innerHTML = '';
+  const today = new Date();
+
+  for (let m = 0; m < 12; m++) {
+    const card = document.createElement('div'); card.className = 'month-card';
+    const title = document.createElement('div'); title.className = 'month-title'; title.textContent = MONTHS[m];
+    card.appendChild(title);
+
+    const tbl = document.createElement('table'); tbl.className = 'mini-cal';
+    const thead = document.createElement('thead');
+    const hr = document.createElement('tr');
+    DAYS.forEach(d => { const th = document.createElement('th'); th.textContent = d; hr.appendChild(th); });
+    thead.appendChild(hr); tbl.appendChild(thead);
+
+    const tbody = document.createElement('tbody');
+    const firstDay = new Date(year, m, 1).getDay();
+    const daysInMonth = new Date(year, m + 1, 0).getDate();
+
+    let row = document.createElement('tr');
+    for (let i = 0; i < firstDay; i++) {
+      const td = document.createElement('td'); td.className = 'empty'; td.textContent = '·'; row.appendChild(td);
+    }
+
+    for (let d = 1; d <= daysInMonth; d++) {
+      const date = new Date(year, m, d);
+      const dow = date.getDay();
+      const td = document.createElement('td');
+      const isToday = date.toDateString() === today.toDateString();
+      if (isToday) td.classList.add('today-mark');
+
+      if (dow === 6) {
+        // Saturday
+        const st = satType(date);
+        td.classList.add('saturday');
+        td.textContent = d;
+        if (st === 'rodrigo')     td.classList.add('sat-rodrigo');
+        else if (st === 'gonzalo') td.classList.add('sat-gonzalo');
+        else                  td.classList.add('sat-rest');
+
+        // Tag the row with the week's shift
+        const youT = getTurno(date, 'rodrigo');
+        row.classList.add('w' + youT);
+        row.appendChild(td);
+        tbody.appendChild(row);
+        row = document.createElement('tr');
+      } else {
+        td.textContent = d;
+        // Tag weekday row on Monday
+        if (dow === 1) {
+          const youT = getTurno(date, 'rodrigo');
+          row.classList.add('w' + youT);
+        }
+        row.appendChild(td);
+        if (d === daysInMonth) tbody.appendChild(row);
+      }
+    }
+    tbl.appendChild(tbody);
+    card.appendChild(tbl);
+    grid.appendChild(card);
+  }
+}
+
+// ── TABLE VIEW ─────────────────────────────
+function renderTable(year) {
+  const container = document.getElementById('tableContent');
+  container.innerHTML = '';
+  const fmt = d => d.toLocaleDateString('es', {day:'numeric', month:'short'});
+  const hl = t => t === 'A' ? '7:00–5:00 / Vie 4:30' : '8:30–6:30 / Vie 7:30–6:00';
+
+  let cur = getMon(new Date(year, 0, 1));
+  const endDate = new Date(year, 11, 31);
+
+  while (cur <= endDate) {
+    const mon = new Date(cur);
+    const fri = new Date(cur); fri.setDate(mon.getDate() + 4);
+    const sat = new Date(cur); sat.setDate(mon.getDate() + 5);
+
+    if (fri.getFullYear() < year && mon.getFullYear() < year) { cur.setDate(cur.getDate() + 7); continue; }
+    if (mon.getFullYear() > year) break;
+
+    const youT = getTurno(mon, 'rodrigo');
+    const gonT = getTurno(mon, 'gonzalo');
+    const st   = satType(sat);
+
+    const satBadge = st === 'rodrigo'
+      ? `<span class="badge bYou">🟠 Rodrigo trabaja · 9–1pm</span>`
+      : st === 'gonzalo'
+      ? `<span class="badge bGon">🟣 Gonzalo trabaja · 9–1pm</span>`
+      : `<span class="badge bRest">✅ Descanso</span>`;
+
+    const div = document.createElement('div'); div.className = 'tbl-week';
+    div.innerHTML = `
+      <div class="tbl-head">${fmt(mon)} – ${fmt(fri)}</div>
+      <div class="tbl-shifts">
+        <div class="tbl-person">
+          <div class="tbl-dot" style="background:var(--rodrigo)"></div>
+          <b>Rodrigo:</b>&nbsp;<span class="badge b${youT}">Turno ${youT}</span>
+          <span style="color:var(--muted);font-size:.78rem">${hl(youT)}</span>
+        </div>
+        <div class="tbl-person">
+          <div class="tbl-dot" style="background:var(--gonzalo)"></div>
+          <b>Gonzalo:</b>&nbsp;<span class="badge b${gonT}">Turno ${gonT}</span>
+          <span style="color:var(--muted);font-size:.78rem">${hl(gonT)}</span>
+        </div>
+      </div>
+      <div class="tbl-sat">🗓 Sáb ${fmt(sat)}: ${satBadge}</div>
+    `;
+    container.appendChild(div);
+    cur.setDate(cur.getDate() + 7);
+  }
+}
+
+// ── VIEW TOGGLE ────────────────────────────
+function showView(v) {
+  document.getElementById('calView').style.display   = v === 'calendar' ? 'block' : 'none';
+  document.getElementById('tableView').style.display = v === 'table'    ? 'block' : 'none';
+  document.querySelectorAll('.tab').forEach((t, i) => t.classList.toggle('active', i === (v === 'calendar' ? 0 : 1)));
+  if (v === 'table') renderTable(currentYear);
+}
+
+document.getElementById('prevYear').addEventListener('click', () => { currentYear--; renderCalendar(currentYear); if (document.getElementById('tableView').style.display === 'block') renderTable(currentYear); });
+document.getElementById('nextYear').addEventListener('click', () => { currentYear++; renderCalendar(currentYear); if (document.getElementById('tableView').style.display === 'block') renderTable(currentYear); });
+
+renderThisWeek();
+renderCalendar(currentYear);
+</script>
+</body>
+</html>
