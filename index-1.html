@@ -1,0 +1,701 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Calendario de Turnos</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg:#0c0c12; --surface:#14141e; --surface2:#1b1b27; --border:#28283c; --border2:#32324a;
+    --rodrigo:#ca8a04; --gonzalo:#dc2626; --turnoA:#f59e0b; --turnoB:#38bdf8; --rest:#34d399;
+    --text:#e2e2ef; --muted:#64648a; --radius:14px;
+  }
+  *{margin:0;padding:0;box-sizing:border-box;}
+  body{
+    font-family:'DM Sans',sans-serif; background:var(--bg); color:var(--text);
+    min-height:100vh; padding:36px 18px 80px;
+    background-image:radial-gradient(ellipse at 15% 15%,rgba(220,38,38,.07) 0%,transparent 55%),
+                     radial-gradient(ellipse at 85% 85%,rgba(202,138,4,.07) 0%,transparent 55%);
+  }
+  header{text-align:center;margin-bottom:36px;}
+  header h1{
+    font-family:'Syne',sans-serif; font-size:clamp(1.7rem,4vw,2.6rem); font-weight:800;
+    background:linear-gradient(135deg,#f97316,#fbbf24);
+    -webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;
+    margin-bottom:6px;
+  }
+  header p{color:var(--muted);font-size:.9rem;}
+
+  /* TABS */
+  .tabs{display:flex;gap:8px;justify-content:center;margin-bottom:28px;flex-wrap:wrap;}
+  .tab{padding:9px 22px;border-radius:100px;border:1px solid var(--border2);background:var(--surface);color:var(--muted);font-size:.85rem;font-weight:500;cursor:pointer;transition:all .2s;font-family:'DM Sans',sans-serif;}
+  .tab.active{background:var(--rodrigo);border-color:var(--rodrigo);color:#fff;font-weight:600;}
+  .tab:hover:not(.active){color:var(--text);}
+
+  /* LEGEND */
+  .legend{display:flex;flex-wrap:wrap;gap:10px;justify-content:center;margin-bottom:28px;}
+  .leg{display:flex;align-items:center;gap:7px;background:var(--surface);border:1px solid var(--border);padding:7px 14px;border-radius:100px;font-size:.8rem;}
+  .leg-dot{width:9px;height:9px;border-radius:50%;flex-shrink:0;}
+
+  /* THIS WEEK */
+  .this-week{max-width:680px;margin:0 auto 32px;background:var(--surface);border:1px solid var(--border2);border-radius:var(--radius);padding:20px 24px;}
+  .section-label{font-family:'Syne',sans-serif;font-size:.7rem;text-transform:uppercase;letter-spacing:2px;color:var(--muted);margin-bottom:14px;}
+  .week-people{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
+  .person-card{background:var(--surface2);border-radius:10px;padding:14px 16px;border-left:3px solid transparent;}
+  .person-card.rodrigo-card{border-left-color:var(--rodrigo);}
+  .person-card.gon-card{border-left-color:var(--gonzalo);}
+  .person-name{font-weight:600;font-size:.9rem;margin-bottom:5px;}
+  .person-shift{font-size:.81rem;color:var(--muted);line-height:1.6;}
+  .badge{display:inline-block;padding:2px 10px;border-radius:100px;font-size:.72rem;font-weight:700;margin-top:6px;text-transform:uppercase;letter-spacing:.5px;}
+  .bA{background:rgba(245,158,11,.2);color:var(--turnoA);}
+  .bB{background:rgba(56,189,248,.2);color:var(--turnoB);}
+  .bYou{background:rgba(202,138,4,.2);color:var(--rodrigo);}
+  .bGon{background:rgba(220,38,38,.2);color:var(--gonzalo);}
+  .bRest{background:rgba(52,211,153,.15);color:var(--rest);}
+  .sat-row{margin-top:12px;padding-top:12px;border-top:1px solid var(--border);font-size:.84rem;display:flex;align-items:center;gap:10px;flex-wrap:wrap;}
+
+  /* YEAR NAV */
+  .controls{display:flex;justify-content:center;align-items:center;gap:18px;margin-bottom:28px;}
+  .controls button{background:var(--surface);border:1px solid var(--border);color:var(--text);width:36px;height:36px;border-radius:50%;cursor:pointer;font-size:1rem;display:flex;align-items:center;justify-content:center;transition:all .2s;}
+  .controls button:hover{border-color:var(--rodrigo);color:var(--rodrigo);}
+  .year-label{font-family:'Syne',sans-serif;font-size:1.4rem;font-weight:700;min-width:56px;text-align:center;}
+
+  /* MONTHS GRID */
+  .months-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(275px,1fr));gap:18px;max-width:1100px;margin:0 auto;}
+  .month-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:18px;}
+  .month-title{font-family:'Syne',sans-serif;font-weight:700;font-size:.95rem;text-transform:uppercase;letter-spacing:1px;margin-bottom:12px;}
+  .mini-cal{width:100%;border-collapse:collapse;}
+  .mini-cal th{font-size:.68rem;text-transform:uppercase;color:var(--muted);padding:3px 0;text-align:center;font-weight:500;letter-spacing:.4px;}
+  .mini-cal td{text-align:center;padding:3px 2px;font-size:.83rem;border-radius:7px;position:relative;}
+  .mini-cal td.empty{color:transparent;}
+
+  /* Weekday cells tinted by shift */
+  .mini-cal tr.wA td:not(.saturday):not(.empty){color:#8a7040;}
+  .mini-cal tr.wB td:not(.saturday):not(.empty){color:#2e6a7a;}
+  .mini-cal tr.wA td.saturday-plain{color:#8a7040;}
+  .mini-cal tr.wB td.saturday-plain{color:#2e6a7a;}
+
+  /* Saturday special cells */
+  .mini-cal td.saturday{font-weight:700;font-size:.9rem;}
+  .mini-cal td.sat-rodrigo{background:rgba(202,138,4,.2);color:var(--rodrigo);border:1px solid rgba(202,138,4,.35);}
+  .mini-cal td.sat-gonzalo{background:rgba(220,38,38,.2);color:var(--gonzalo);border:1px solid rgba(220,38,38,.35);}
+  .mini-cal td.sat-rest{background:rgba(52,211,153,.13);color:var(--rest);border:1px solid rgba(52,211,153,.25);}
+  .mini-cal td.today-mark{outline:2px solid #fbbf24;outline-offset:1px;border-radius:7px;}
+
+  /* Week label strip */
+  .wk-strip{display:flex;gap:4px;margin-bottom:6px;flex-wrap:wrap;}
+  .wk-chip{font-size:.65rem;padding:2px 7px;border-radius:100px;font-weight:600;}
+  .wk-chip.A{background:rgba(245,158,11,.15);color:var(--turnoA);}
+  .wk-chip.B{background:rgba(56,189,248,.15);color:var(--turnoB);}
+
+  /* TABLE VIEW */
+  #tableView{max-width:760px;margin:0 auto;display:none;}
+  .tbl-week{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:16px 20px;margin-bottom:10px;}
+  .tbl-head{font-family:'Syne',sans-serif;font-size:.72rem;text-transform:uppercase;letter-spacing:1px;color:var(--muted);margin-bottom:10px;}
+  .tbl-shifts{display:flex;gap:16px;flex-wrap:wrap;margin-bottom:8px;}
+  .tbl-person{display:flex;align-items:center;gap:8px;font-size:.85rem;}
+  .tbl-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0;}
+  .tbl-sat{margin-top:8px;padding-top:8px;border-top:1px solid var(--border);font-size:.8rem;color:var(--muted);display:flex;align-items:center;gap:8px;flex-wrap:wrap;}
+
+  @media(max-width:500px){
+    .months-grid{grid-template-columns:1fr;}
+    .week-people{grid-template-columns:1fr;}
+  }
+
+  /* ── SOLICITUD BTN ─────────────────────── */
+  .fab{position:fixed;bottom:24px;right:24px;z-index:100;background:linear-gradient(135deg,#ca8a04,#f59e0b);color:#fff;border:none;border-radius:100px;padding:14px 22px;font-family:'Syne',sans-serif;font-weight:700;font-size:.9rem;cursor:pointer;box-shadow:0 4px 20px rgba(202,138,4,.4);display:flex;align-items:center;gap:8px;transition:transform .2s;}
+  .fab:hover{transform:scale(1.05);}
+  .modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.75);z-index:200;display:none;align-items:center;justify-content:center;padding:20px;}
+  .modal-overlay.open{display:flex;}
+  .modal{background:var(--surface);border:1px solid var(--border2);border-radius:var(--radius);padding:24px;width:100%;max-width:480px;max-height:90vh;overflow-y:auto;}
+  .modal-title{font-family:'Syne',sans-serif;font-size:1.2rem;font-weight:800;margin-bottom:4px;}
+  .modal-sub{color:var(--muted);font-size:.82rem;margin-bottom:20px;}
+  .form-group{margin-bottom:14px;}
+  .form-label{font-size:.8rem;color:var(--muted);margin-bottom:5px;display:block;text-transform:uppercase;letter-spacing:.5px;}
+  .form-control{width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:10px 12px;color:var(--text);font-family:'DM Sans',sans-serif;font-size:.9rem;outline:none;}
+  .form-control:focus{border-color:var(--rodrigo);}
+  select.form-control option{background:var(--surface2);color:var(--text);}
+  .modal-actions{display:flex;gap:10px;margin-top:20px;flex-wrap:wrap;}
+  .btn-wa{flex:1;background:#25d366;color:#fff;border:none;border-radius:10px;padding:12px;font-weight:700;font-size:.9rem;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px;}
+  .btn-mail{flex:1;background:var(--surface2);color:var(--text);border:1px solid var(--border);border-radius:10px;padding:12px;font-weight:700;font-size:.9rem;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px;}
+  .btn-close-modal{width:100%;background:transparent;color:var(--muted);border:1px solid var(--border);border-radius:10px;padding:10px;font-size:.85rem;cursor:pointer;margin-top:6px;}
+  .type-chips{display:flex;flex-wrap:wrap;gap:8px;margin-top:4px;}
+  .type-chip{padding:7px 14px;border-radius:100px;border:1px solid var(--border);background:var(--surface2);color:var(--muted);font-size:.8rem;cursor:pointer;transition:all .2s;}
+  .type-chip.selected{border-color:var(--rodrigo);background:rgba(202,138,4,.15);color:var(--rodrigo);font-weight:600;}
+
+  .btn-pdf{position:fixed;bottom:24px;left:24px;z-index:100;background:linear-gradient(135deg,#0f172a,#1e293b);color:#fff;border:none;border-radius:100px;padding:14px 22px;font-family:'Syne',sans-serif;font-weight:700;font-size:.9rem;cursor:pointer;box-shadow:0 4px 20px rgba(0,0,0,.4);display:flex;align-items:center;gap:8px;transition:transform .2s;}
+  .btn-pdf:hover{transform:scale(1.05);}
+  .btn-pdf:disabled{opacity:.6;cursor:not-allowed;transform:none;}
+  /* PDF print styles */
+  #pdfTarget{display:none;}
+  #pdfTarget.rendering{display:block;position:fixed;top:0;left:0;width:794px;background:#fff;color:#111;z-index:-999;padding:30px;font-family:Arial,sans-serif;}
+  #pdfTarget .pdf-month-grid{display:grid;grid-template-columns:1fr 1fr;gap:20px;margin-bottom:24px;}
+  #pdfTarget .pdf-month{border:1px solid #e5e7eb;border-radius:8px;padding:12px;}
+  #pdfTarget .pdf-month-title{font-size:13px;font-weight:700;text-align:center;margin-bottom:8px;text-transform:uppercase;letter-spacing:1px;color:#111;}
+  #pdfTarget table{width:100%;border-collapse:collapse;}
+  #pdfTarget th{font-size:9px;text-align:center;color:#6b7280;padding:3px 0;text-transform:uppercase;}
+  #pdfTarget td{text-align:center;padding:3px 1px;font-size:10px;color:#6b7280;}
+  #pdfTarget td.pdf-sat-r{background:#fef9c3;color:#ca8a04;font-weight:700;border-radius:4px;}
+  #pdfTarget td.pdf-sat-g{background:#fee2e2;color:#dc2626;font-weight:700;border-radius:4px;}
+  #pdfTarget td.pdf-sat-rest{background:#d1fae5;color:#059669;font-weight:700;border-radius:4px;}
+  #pdfTarget td.pdf-today{outline:2px solid #f59e0b;border-radius:4px;}
+  #pdfTarget .pdf-week-a{background:#fffbeb;}
+  #pdfTarget .pdf-week-b{background:#f0f9ff;}
+  #pdfTarget .pdf-section{font-size:11px;font-weight:700;text-align:center;text-transform:uppercase;letter-spacing:2px;color:#6b7280;margin:16px 0 10px;}
+  #pdfTarget .pdf-header{text-align:center;margin-bottom:20px;border-bottom:2px solid #e5e7eb;padding-bottom:14px;}
+  #pdfTarget .pdf-header h1{font-size:22px;font-weight:900;color:#ca8a04;margin-bottom:4px;}
+  #pdfTarget .pdf-header p{font-size:10px;color:#6b7280;}
+  #pdfTarget .pdf-legend{display:flex;flex-wrap:wrap;gap:8px;justify-content:center;margin-bottom:16px;}
+  #pdfTarget .pdf-leg{display:flex;align-items:center;gap:5px;font-size:9px;color:#374151;}
+  #pdfTarget .pdf-leg-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0;}
+  #pdfTarget .pdf-week-row{background:#f9f9f9;border:1px solid #e5e7eb;border-radius:8px;padding:10px 14px;margin-bottom:6px;}
+  #pdfTarget .pdf-week-date{font-size:9px;color:#6b7280;text-transform:uppercase;letter-spacing:1px;margin-bottom:6px;}
+  #pdfTarget .pdf-week-people{display:flex;gap:16px;flex-wrap:wrap;margin-bottom:4px;}
+  #pdfTarget .pdf-person{display:flex;align-items:center;gap:6px;font-size:10px;}
+  #pdfTarget .pdf-dot{width:7px;height:7px;border-radius:50%;}
+  #pdfTarget .pdf-badge{padding:1px 7px;border-radius:100px;font-size:8px;font-weight:700;}
+  #pdfTarget .pdf-badge-a{background:#fef3c7;color:#92400e;}
+  #pdfTarget .pdf-badge-b{background:#e0f2fe;color:#0369a1;}
+  #pdfTarget .pdf-sat-line{font-size:9px;color:#6b7280;border-top:1px solid #e5e7eb;padding-top:5px;margin-top:4px;}
+  #pdfTarget .pdf-sat-r-txt{color:#ca8a04;font-weight:700;}
+  #pdfTarget .pdf-sat-g-txt{color:#dc2626;font-weight:700;}
+  #pdfTarget .pdf-sat-rest-txt{color:#059669;font-weight:700;}
+  #pdfTarget .pdf-week-row.wA{background:#fffbeb;}
+  #pdfTarget .pdf-week-row.wB{background:#f0f9ff;}
+</style>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+</head>
+<body>
+
+<header>
+  <h1>📅 Turnos & Sábados</h1>
+  <p>Turnos semanales alternados · Sábados 1 laboral × 3 descanso</p>
+</header>
+
+<div class="tabs">
+  <button class="tab active" onclick="showView('calendar')">📆 Calendario</button>
+  <button class="tab" onclick="showView('table')">📋 Lista semanal</button>
+</div>
+
+<div class="legend">
+  <div class="leg"><div class="leg-dot" style="background:var(--turnoA)"></div><b>Turno A</b>&nbsp;· Lun–Jue 7:00–5:00 / Vie 7:00–4:30</div>
+  <div class="leg"><div class="leg-dot" style="background:var(--turnoB)"></div><b>Turno B</b>&nbsp;· Lun–Jue 8:30–6:30 / Vie 7:30–6:00</div>
+  <div class="leg"><div class="leg-dot" style="background:var(--rodrigo)"></div>Rodrigo — sáb. laboral</div>
+  <div class="leg"><div class="leg-dot" style="background:var(--gonzalo)"></div>Gonzalo — sáb. laboral</div>
+  <div class="leg"><div class="leg-dot" style="background:var(--rest)"></div>Sábado descanso</div>
+</div>
+
+<!-- THIS WEEK -->
+<div class="this-week" id="thisWeekCard"></div>
+
+<!-- YEAR NAV -->
+<div class="controls">
+  <button id="prevYear">&#8592;</button>
+  <div class="year-label" id="yearLabel"></div>
+  <button id="nextYear">&#8594;</button>
+</div>
+
+<!-- CALENDAR -->
+<div id="calView">
+  <div class="months-grid" id="monthsGrid"></div>
+</div>
+
+<!-- TABLE -->
+<div id="tableView">
+  <div id="tableContent"></div>
+</div>
+
+<script>
+// ══════════════════════════════════════════
+//  REFERENCE POINTS
+//  Week of Mar 3 2025 → rodrigo = Turno A, Gonzalo = Turno B
+//  Sat Feb 21 2025    → rodrigo work (sat cycle index 0)
+// ══════════════════════════════════════════
+const REF_WEEK = new Date(2025, 2, 3);  // Mon Mar 3 2025
+const REF_SAT  = new Date(2025, 1, 21); // Sat Feb 21 2025
+
+function getMon(date) {
+  const d = new Date(date);
+  d.setHours(0,0,0,0);
+  const dow = (d.getDay() + 6) % 7; // 0=Mon
+  d.setDate(d.getDate() - dow);
+  return d;
+}
+
+// How many weeks from REF_WEEK to the week containing 'date'
+function weekIdx(date) {
+  const mon = getMon(date);
+  const ref = getMon(REF_WEEK);
+  return Math.round((mon - ref) / (7 * 864e5));
+}
+
+// Simple alternating: even idx → youA/gonB, odd idx → youB/gonA
+function getTurno(date, who) {
+  const idx = weekIdx(date);
+  const isEven = ((idx % 2) + 2) % 2 === 0;
+  if (who === 'rodrigo')     return isEven ? 'A' : 'B';
+  if (who === 'gonzalo') return isEven ? 'B' : 'A';
+}
+
+// Saturday type: cycle of 4 from REF_SAT
+// 0=rodrigo work, 1=gonzalo works, 2=rest, 3=rest
+function satType(date) {
+  const d = new Date(date); d.setHours(0,0,0,0);
+  const b = new Date(REF_SAT); b.setHours(0,0,0,0);
+  const w = Math.round((d - b) / (7 * 864e5));
+  const mod = ((w % 4) + 4) % 4;
+  if (mod === 0) return 'rodrigo';
+  if (mod === 1) return 'gonzalo';
+  return 'rest';
+}
+
+const hoursA = 'Lun–Jue 7:00am – 5:00pm · Vie 7:00am – 4:30pm';
+const hoursB = 'Lun–Jue 7:30am – 6:30pm · Vie 7:30am – 6:00pm';
+
+// ── THIS WEEK CARD ─────────────────────────
+function renderThisWeek() {
+  const today = new Date();
+  const mon = getMon(today);
+  const fri = new Date(mon); fri.setDate(mon.getDate() + 4);
+  const sat = new Date(mon); sat.setDate(mon.getDate() + 5);
+  const fmt = d => d.toLocaleDateString('es', {day:'numeric', month:'short'});
+
+  const youT = getTurno(today, 'rodrigo');
+  const gonT = getTurno(today, 'gonzalo');
+  const st   = satType(sat);
+
+  const satBadge = st === 'rodrigo'
+    ? `<span class="badge bYou">🟠 Rodrigo trabaja · 9am–1pm</span>`
+    : st === 'gonzalo'
+    ? `<span class="badge bGon">🟣 Gonzalo trabaja · 9am–1pm</span>`
+    : `<span class="badge bRest">✅ Descanso para ambos</span>`;
+
+  document.getElementById('thisWeekCard').innerHTML = `
+    <div class="section-label">Semana actual · ${fmt(mon)} – ${fmt(fri)}</div>
+    <div class="week-people">
+      <div class="person-card rodrigo-card">
+        <div class="person-name" style="color:var(--rodrigo)">Rodrigo</div>
+        <div class="person-shift">${youT === 'A' ? hoursA : hoursB}</div>
+        <span class="badge b${youT}">Turno ${youT}</span>
+      </div>
+      <div class="person-card gon-card">
+        <div class="person-name" style="color:var(--gonzalo)">Gonzalo</div>
+        <div class="person-shift">${gonT === 'A' ? hoursA : hoursB}</div>
+        <span class="badge b${gonT}">Turno ${gonT}</span>
+      </div>
+    </div>
+    <div class="sat-row">🗓 Sáb ${fmt(sat)}: ${satBadge}</div>
+  `;
+}
+
+// ── CALENDAR ───────────────────────────────
+const MONTHS = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
+const DAYS   = ['Do','Lu','Ma','Mi','Ju','Vi','Sá'];
+let currentYear = new Date().getFullYear();
+
+function renderCalendar(year) {
+  document.getElementById('yearLabel').textContent = year;
+  const grid = document.getElementById('monthsGrid');
+  grid.innerHTML = '';
+  const today = new Date();
+
+  for (let m = 0; m < 12; m++) {
+    const card = document.createElement('div'); card.className = 'month-card';
+    const title = document.createElement('div'); title.className = 'month-title'; title.textContent = MONTHS[m];
+    card.appendChild(title);
+
+    const tbl = document.createElement('table'); tbl.className = 'mini-cal';
+    const thead = document.createElement('thead');
+    const hr = document.createElement('tr');
+    DAYS.forEach(d => { const th = document.createElement('th'); th.textContent = d; hr.appendChild(th); });
+    thead.appendChild(hr); tbl.appendChild(thead);
+
+    const tbody = document.createElement('tbody');
+    const firstDay = new Date(year, m, 1).getDay();
+    const daysInMonth = new Date(year, m + 1, 0).getDate();
+
+    let row = document.createElement('tr');
+    for (let i = 0; i < firstDay; i++) {
+      const td = document.createElement('td'); td.className = 'empty'; td.textContent = '·'; row.appendChild(td);
+    }
+
+    for (let d = 1; d <= daysInMonth; d++) {
+      const date = new Date(year, m, d);
+      const dow = date.getDay();
+      const td = document.createElement('td');
+      const isToday = date.toDateString() === today.toDateString();
+      if (isToday) td.classList.add('today-mark');
+
+      if (dow === 6) {
+        // Saturday
+        const st = satType(date);
+        td.classList.add('saturday');
+        td.textContent = d;
+        if (st === 'rodrigo')     td.classList.add('sat-rodrigo');
+        else if (st === 'gonzalo') td.classList.add('sat-gonzalo');
+        else                  td.classList.add('sat-rest');
+
+        // Tag the row with the week's shift
+        const youT = getTurno(date, 'rodrigo');
+        row.classList.add('w' + youT);
+        row.appendChild(td);
+        tbody.appendChild(row);
+        row = document.createElement('tr');
+      } else {
+        td.textContent = d;
+        // Tag weekday row on Monday
+        if (dow === 1) {
+          const youT = getTurno(date, 'rodrigo');
+          row.classList.add('w' + youT);
+        }
+        row.appendChild(td);
+        if (d === daysInMonth) tbody.appendChild(row);
+      }
+    }
+    tbl.appendChild(tbody);
+    card.appendChild(tbl);
+    grid.appendChild(card);
+  }
+}
+
+// ── TABLE VIEW ─────────────────────────────
+function renderTable(year) {
+  const container = document.getElementById('tableContent');
+  container.innerHTML = '';
+  const fmt = d => d.toLocaleDateString('es', {day:'numeric', month:'short'});
+  const hl = t => t === 'A' ? '7:00–5:00 / Vie 4:30' : '8:30–6:30 / Vie 7:30–6:00';
+
+  let cur = getMon(new Date(year, 0, 1));
+  const endDate = new Date(year, 11, 31);
+
+  while (cur <= endDate) {
+    const mon = new Date(cur);
+    const fri = new Date(cur); fri.setDate(mon.getDate() + 4);
+    const sat = new Date(cur); sat.setDate(mon.getDate() + 5);
+
+    if (fri.getFullYear() < year && mon.getFullYear() < year) { cur.setDate(cur.getDate() + 7); continue; }
+    if (mon.getFullYear() > year) break;
+
+    const youT = getTurno(mon, 'rodrigo');
+    const gonT = getTurno(mon, 'gonzalo');
+    const st   = satType(sat);
+
+    const satBadge = st === 'rodrigo'
+      ? `<span class="badge bYou">🟠 Rodrigo trabaja · 9–1pm</span>`
+      : st === 'gonzalo'
+      ? `<span class="badge bGon">🟣 Gonzalo trabaja · 9–1pm</span>`
+      : `<span class="badge bRest">✅ Descanso</span>`;
+
+    const div = document.createElement('div'); div.className = 'tbl-week';
+    div.innerHTML = `
+      <div class="tbl-head">${fmt(mon)} – ${fmt(fri)}</div>
+      <div class="tbl-shifts">
+        <div class="tbl-person">
+          <div class="tbl-dot" style="background:var(--rodrigo)"></div>
+          <b>Rodrigo:</b>&nbsp;<span class="badge b${youT}">Turno ${youT}</span>
+          <span style="color:var(--muted);font-size:.78rem">${hl(youT)}</span>
+        </div>
+        <div class="tbl-person">
+          <div class="tbl-dot" style="background:var(--gonzalo)"></div>
+          <b>Gonzalo:</b>&nbsp;<span class="badge b${gonT}">Turno ${gonT}</span>
+          <span style="color:var(--muted);font-size:.78rem">${hl(gonT)}</span>
+        </div>
+      </div>
+      <div class="tbl-sat">🗓 Sáb ${fmt(sat)}: ${satBadge}</div>
+    `;
+    container.appendChild(div);
+    cur.setDate(cur.getDate() + 7);
+  }
+}
+
+// ── VIEW TOGGLE ────────────────────────────
+function showView(v) {
+  document.getElementById('calView').style.display   = v === 'calendar' ? 'block' : 'none';
+  document.getElementById('tableView').style.display = v === 'table'    ? 'block' : 'none';
+  document.querySelectorAll('.tab').forEach((t, i) => t.classList.toggle('active', i === (v === 'calendar' ? 0 : 1)));
+  if (v === 'table') renderTable(currentYear);
+}
+
+document.getElementById('prevYear').addEventListener('click', () => { currentYear--; renderCalendar(currentYear); if (document.getElementById('tableView').style.display === 'block') renderTable(currentYear); });
+document.getElementById('nextYear').addEventListener('click', () => { currentYear++; renderCalendar(currentYear); if (document.getElementById('tableView').style.display === 'block') renderTable(currentYear); });
+
+renderThisWeek();
+renderCalendar(currentYear);
+</script>
+
+
+<!-- PDF Export Button -->
+<button class="btn-pdf" id="btnPdf" onclick="exportarPDF()">
+  📄 Exportar PDF
+</button>
+
+<!-- Hidden PDF render target -->
+<div id="pdfTarget"></div>
+
+<!-- FAB -->
+<button class="fab" onclick="document.getElementById('modalOverlay').classList.add('open')">
+  🔄 Solicitar cambio
+</button>
+
+<!-- MODAL -->
+<div class="modal-overlay" id="modalOverlay">
+  <div class="modal">
+    <div class="modal-title">🔄 Solicitud de Cambio</div>
+    <div class="modal-sub">Completa el formulario y envíalo por WhatsApp o correo</div>
+
+    <div class="form-group">
+      <label class="form-label">Tu nombre</label>
+      <select class="form-control" id="solNombre">
+        <option value="Rodrigo">Rodrigo</option>
+        <option value="Gonzalo">Gonzalo</option>
+      </select>
+    </div>
+
+    <div class="form-group">
+      <label class="form-label">Tipo de solicitud</label>
+      <div class="type-chips">
+        <div class="type-chip selected" onclick="selectTipo(this,'Cambio de turno (A↔B)')">🔁 Cambio de turno</div>
+        <div class="type-chip" onclick="selectTipo(this,'Cambio de sábado laboral')">📅 Cambio de sábado</div>
+        <div class="type-chip" onclick="selectTipo(this,'Cambio de semana completa')">🗓 Semana completa</div>
+      </div>
+      <input type="hidden" id="solTipo" value="Cambio de turno (A↔B)">
+    </div>
+
+    <div class="form-group">
+      <label class="form-label">Fecha que quieres cambiar</label>
+      <input type="date" class="form-control" id="solFecha">
+    </div>
+
+    <div class="form-group">
+      <label class="form-label">Propuesta de cambio (opcional)</label>
+      <input type="text" class="form-control" id="solPropuesta" placeholder="Ej: cambiar con la semana del 15 de abril">
+    </div>
+
+    <div class="form-group">
+      <label class="form-label">Motivo</label>
+      <textarea class="form-control" id="solMotivo" rows="2" placeholder="Ej: cita médica, compromiso familiar..."></textarea>
+    </div>
+
+    <div class="modal-actions">
+      <button class="btn-wa" onclick="enviarWhatsApp()">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="white"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
+        WhatsApp
+      </button>
+      <button class="btn-mail" onclick="enviarCorreo()">
+        📧 Correo
+      </button>
+    </div>
+    <button class="btn-close-modal" onclick="document.getElementById('modalOverlay').classList.remove('open')">Cancelar</button>
+  </div>
+</div>
+
+<script>
+// ── CONFIGURACIÓN — cambia estos datos cuando los tengas ──
+const WA_NUMERO  = '521XXXXXXXXXX';   // Número con código de país, sin + ni espacios
+const MAIL_DESTINO = 'encargado@empresa.com'; // Correo del encargado
+
+function selectTipo(el, val) {
+  document.querySelectorAll('.type-chip').forEach(c => c.classList.remove('selected'));
+  el.classList.add('selected');
+  document.getElementById('solTipo').value = val;
+}
+
+function buildMensaje() {
+  const nombre   = document.getElementById('solNombre').value;
+  const tipo     = document.getElementById('solTipo').value;
+  const fecha    = document.getElementById('solFecha').value || 'sin especificar';
+  const propuesta= document.getElementById('solPropuesta').value || 'sin propuesta';
+  const motivo   = document.getElementById('solMotivo').value || 'sin motivo especificado';
+  return `Solicitud de cambio\n\nNombre: ${nombre}\nTipo: ${tipo}\nFecha: ${fecha}\nPropuesta: ${propuesta}\nMotivo: ${motivo}`;
+}
+
+function enviarWhatsApp() {
+  const msg = buildMensaje();
+  const url = `https://wa.me/${WA_NUMERO}?text=${encodeURIComponent(msg)}`;
+  window.open(url, '_blank');
+}
+
+function enviarCorreo() {
+  const msg = buildMensaje();
+  const subject = encodeURIComponent('Solicitud de cambio de turno/sábado');
+  const body    = encodeURIComponent(msg);
+  window.location.href = `mailto:${MAIL_DESTINO}?subject=${subject}&body=${body}`;
+}
+</script>
+
+
+<script>
+// ── PDF EXPORT ─────────────────────────────
+const MONTHS_PDF = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
+const DAYS_PDF   = ['Do','Lu','Ma','Mi','Jue','Vi','Sáb'];
+
+function buildPDFMonthTable(year, month) {
+  const firstDay = new Date(year, month, 1).getDay();
+  const daysInMonth = new Date(year, month+1, 0).getDate();
+  const today = new Date();
+  let html = '<table><thead><tr>';
+  DAYS_PDF.forEach(d => html += `<th>${d}</th>`);
+  html += '</tr></thead><tbody>';
+
+  let cells = [];
+  for(let i=0;i<firstDay;i++) cells.push('<td></td>');
+  for(let d=1;d<=daysInMonth;d++){
+    const date = new Date(year,month,d);
+    const dow = date.getDay();
+    const isToday = date.toDateString()===today.toDateString();
+    if(dow===6){
+      const st = satType(date);
+      const cls = st==='rodrigo'?'pdf-sat-r':st==='gonzalo'?'pdf-sat-g':'pdf-sat-rest';
+      cells.push(`<td class="${cls}${isToday?' pdf-today':''}">${d}</td>`);
+    } else {
+      cells.push(`<td${isToday?' class="pdf-today"':''}>${d}</td>`);
+    }
+  }
+  // chunk into weeks
+  let rows = [];
+  for(let i=0;i<cells.length;i+=7){
+    const week = cells.slice(i,i+7);
+    while(week.length<7) week.push('<td></td>');
+    // determine turno from saturday (last cell)
+    const satDay = cells.slice(i,i+7).findIndex(c=>c.includes('pdf-sat'));
+    let wClass='';
+    // find a day number in this row
+    const dayMatch = week.join('').match(/>(\d+)</);
+    if(dayMatch){
+      const d2 = parseInt(dayMatch[1]);
+      const dt = new Date(year,month,d2);
+      const t = getTurno(dt,'rodrigo');
+      wClass = t==='A'?'pdf-week-a':'pdf-week-b';
+    }
+    rows.push(`<tr class="${wClass}">${week.join('')}</tr>`);
+  }
+  html += rows.join('') + '</tbody></table>';
+  return html;
+}
+
+function buildPDFWeekList(year) {
+  const fmt = d => d.toLocaleDateString('es',{day:'numeric',month:'short'});
+  const hl = t => t==='A'?'7:00–5:00':'8:30–6:30';
+  let html = '';
+  let cur = getMon(new Date(year,0,1));
+  const endDate = new Date(year,11,31);
+  while(cur<=endDate){
+    const mon=new Date(cur);
+    const fri=new Date(cur); fri.setDate(mon.getDate()+4);
+    const sat=new Date(cur); sat.setDate(mon.getDate()+5);
+    if(fri.getFullYear()<year&&mon.getFullYear()<year){cur.setDate(cur.getDate()+7);continue;}
+    if(mon.getFullYear()>year) break;
+    const youT=getTurno(mon,'rodrigo');
+    const gonT=getTurno(mon,'gonzalo');
+    const st=satType(sat);
+    const satTxt = st==='rodrigo'
+      ? `<span class="pdf-sat-r-txt">Rodrigo trabaja · 9–1pm</span>`
+      : st==='gonzalo'
+      ? `<span class="pdf-sat-g-txt">Gonzalo trabaja · 9–1pm</span>`
+      : `<span class="pdf-sat-rest-txt">Descanso para ambos ✓</span>`;
+    html += `<div class="pdf-week-row w${youT}">
+      <div class="pdf-week-date">${fmt(mon)} – ${fmt(fri)}</div>
+      <div class="pdf-week-people">
+        <div class="pdf-person"><div class="pdf-dot" style="background:#ca8a04"></div><b>Rodrigo</b>&nbsp;<span class="pdf-badge pdf-badge-${youT.toLowerCase()}">Turno ${youT}</span>&nbsp;<span style="color:#6b7280;font-size:9px">${hl(youT)}</span></div>
+        <div class="pdf-person"><div class="pdf-dot" style="background:#dc2626"></div><b>Gonzalo</b>&nbsp;<span class="pdf-badge pdf-badge-${gonT.toLowerCase()}">Turno ${gonT}</span>&nbsp;<span style="color:#6b7280;font-size:9px">${hl(gonT)}</span></div>
+      </div>
+      <div class="pdf-sat-line">Sáb ${fmt(sat)}: ${satTxt}</div>
+    </div>`;
+    cur.setDate(cur.getDate()+7);
+  }
+  return html;
+}
+
+async function exportarPDF() {
+  const btn = document.getElementById('btnPdf');
+  btn.disabled = true;
+  btn.textContent = '⏳ Generando...';
+
+  const year = currentYear;
+  const target = document.getElementById('pdfTarget');
+
+  // Build calendar months HTML
+  let monthsHTML = '<div class="pdf-month-grid">';
+  for(let m=0;m<12;m++){
+    monthsHTML += `<div class="pdf-month">
+      <div class="pdf-month-title">${MONTHS_PDF[m]}</div>
+      ${buildPDFMonthTable(year, m)}
+    </div>`;
+  }
+  monthsHTML += '</div>';
+
+  target.innerHTML = `
+    <div class="pdf-header">
+      <h1>📅 Turnos & Sábados ${year}</h1>
+      <p>Rodrigo & Gonzalo · Rotación semanal A/B · Sábados 1×3</p>
+    </div>
+    <div class="pdf-legend">
+      <div class="pdf-leg"><div class="pdf-leg-dot" style="background:#ca8a04"></div>Rodrigo sáb. laboral</div>
+      <div class="pdf-leg"><div class="pdf-leg-dot" style="background:#dc2626"></div>Gonzalo sáb. laboral</div>
+      <div class="pdf-leg"><div class="pdf-leg-dot" style="background:#059669"></div>Sábado descanso</div>
+      <div class="pdf-leg"><div class="pdf-leg-dot" style="background:#f59e0b"></div>Semana Turno A</div>
+      <div class="pdf-leg"><div class="pdf-leg-dot" style="background:#38bdf8"></div>Semana Turno B</div>
+    </div>
+    <div class="pdf-section">— Calendario Mensual —</div>
+    ${monthsHTML}
+    <div class="pdf-section">— Lista Semanal —</div>
+    ${buildPDFWeekList(year)}
+  `;
+
+  target.classList.add('rendering');
+  await new Promise(r => setTimeout(r, 300));
+
+  try {
+    const { jsPDF } = window.jspdf;
+    const pdf = new jsPDF({ orientation:'portrait', unit:'mm', format:'a4' });
+    const pageW = 210, pageH = 297, margin = 10;
+    const contentW = pageW - margin*2;
+
+    const canvas = await html2canvas(target, {
+      scale: 2,
+      useCORS: true,
+      backgroundColor: '#ffffff',
+      width: 794,
+      windowWidth: 794
+    });
+
+    const imgData = canvas.toDataURL('image/jpeg', 0.92);
+    const imgW = contentW;
+    const imgH = (canvas.height * imgW) / canvas.width;
+    let posY = margin;
+    let remaining = imgH;
+    let srcY = 0;
+
+    while(remaining > 0) {
+      const sliceH = Math.min(pageH - margin*2, remaining);
+      const srcSliceH = (sliceH / imgW) * canvas.width;
+      const sliceCanvas = document.createElement('canvas');
+      sliceCanvas.width = canvas.width;
+      sliceCanvas.height = srcSliceH;
+      const ctx = sliceCanvas.getContext('2d');
+      ctx.fillStyle = '#ffffff';
+      ctx.fillRect(0,0,sliceCanvas.width,sliceCanvas.height);
+      ctx.drawImage(canvas, 0, srcY, canvas.width, srcSliceH, 0, 0, canvas.width, srcSliceH);
+      const sliceData = sliceCanvas.toDataURL('image/jpeg', 0.92);
+      if(srcY > 0) pdf.addPage();
+      pdf.addImage(sliceData, 'JPEG', margin, margin, imgW, sliceH);
+      srcY += srcSliceH;
+      remaining -= sliceH;
+    }
+
+    pdf.save(`calendario-turnos-${year}.pdf`);
+  } catch(e) {
+    alert('Error al generar el PDF: ' + e.message);
+  }
+
+  target.classList.remove('rendering');
+  target.innerHTML = '';
+  btn.disabled = false;
+  btn.innerHTML = '📄 Exportar PDF';
+}
+</script>
+
+</body>
+</html>
